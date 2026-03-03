@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Обучение Python | Курс для подростков</title>
+    
+    <!-- Подключаем Skulpt для запуска Python -->
+    <script src="https://skulpt.org/js/skulpt.min.js" type="text/javascript"></script>
+    <script src="https://skulpt.org/js/skulpt-stdlib.js" type="text/javascript"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        /* Базовые стили */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+        }
+
+        /* Основной контейнер */
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+        }
+
+        /* Левое меню */
+        .lessons-sidebar {
+            grid-column: 1;
+            grid-row: 1 / span 2;
+            background-color: #1a2634;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* Верхняя панель */
+        .top-bar {
+            grid-column: 2;
+            grid-row: 1;
+            background-color: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Контент */
+        .content-area {
+            grid-column: 2;
+            grid-row: 2;
+            background-color: white;
+            margin: 20px;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow-y: auto;
+        }
+
+        /* Меню модулей */
+        .module {
+            margin-bottom: 25px;
+        }
+        
+        .module-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 2px solid #3498db;
+            cursor: pointer;
+        }
+        
+        .module-header h3 {
+            font-size: 1rem;
+            color: #ecf0f1;
+            flex: 1;
+        }
+        
+        .module-badge {
+            background-color: #3498db;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 12px;
+        }
+        
+        .module-content {
+            padding-left: 10px;
+        }
+        
+        .module-content.collapsed {
+            display: none;
+        }
+        
+        .lessons-list {
+            list-style: none;
+        }
+
+        .lessons-list li {
+            margin-bottom: 8px;
+        }
+        
+        .lesson-number {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background-color: #2c3e50;
+            color: #bdc3c7;
+            border-radius: 4px;
+            text-align: center;
+            line-height: 24px;
+            font-size: 0.8rem;
+            margin-right: 8px;
+        }
+
+        .lessons-list a {
+            color: #bdc3c7;
+            text-decoration: none;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .lessons-list a:hover {
+            background-color: #2c3e50;
+        }
+
+        .lessons-list a.active {
+            background-color: #3498db;
+            color: white;
+        }
+
+        /* Стили для заблокированных уроков */
+        .lessons-list a[style*="pointer-events: none"] {
+            opacity: 0.5;
+            position: relative;
+        }
+
+        .lessons-list a[style*="pointer-events: none"]:hover::after {
+            content: attr(title);
+            position: absolute;
+            left: 0;
+            top: 100%;
+            background-color: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+
+        .lock-icon {
+            margin-left: auto;
+            font-size: 14px;
+        }
+
+        /* Навигация */
+        .nav-menu {
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-btn {
+            padding: 8px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #7f8c8d;
+            border-radius: 4px;
+        }
+
+        .nav-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .nav-btn:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Теория и практика */
+        .theory-section, .practice-section {
+            display: none;
+        }
+
+        .theory-section.active, .practice-section.active {
+            display: block;
+        }
+
+        .code-block {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+
+        .practice-task {
+            background-color: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .task-header {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .task-badge {
+            background-color: #3498db;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .task-content {
+            padding: 20px;
+        }
+
+        /* Прогресс */
+        .progress-container {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #2c3e50;
+        }
+        
+        .progress-stats {
+            display: flex;
+            justify-content: space-between;
+            color: #bdc3c7;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        
+        .progress-bar-bg {
+            height: 6px;
+            background-color: #2c3e50;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* Поля для кода */
+        textarea {
+            width: 100%;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            background-color: #fafafa;
+            resize: vertical;
+            font-size: 14px;
+        }
+
+        .output-area {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #1e1e1e;
+            color: #fff;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            min-height: 60px;
+            white-space: pre-wrap;
+        }
+
+        .run-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .run-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .info-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+
+        /* Стили для тестов */
+        .test-section {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #3498db;
+        }
+
+        .test-question {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .test-question:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .test-question input[type="radio"] {
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .test-question label {
+            cursor: pointer;
+            display: inline-block;
+            padding: 5px 0;
+        }
+
+        .test-question label:hover {
+            color: #3498db;
+        }
+
+        .reset-btn {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .reset-btn button {
+            background: none;
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .reset-btn button:hover {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        /* Стили для модальных окон */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            width: 400px;
+            margin: 100px auto;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .modal-content input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Левое меню -->
+        <aside class="lessons-sidebar">
+            <h3 style="margin-bottom: 20px;">🐍 Python для подростков</h3>
+            
+            <!-- Модуль 1 -->
+            <div class="module">
+                <div class="module-header" onclick="toggleModule(this)">
+                    <span>📘</span>
+                    <h3>Модуль 1: Основы программирования</h3>
+                    <span class="module-badge">6 занятий</span>
+                </div>
+                <div class="module-content">
+                    <ul class="lessons-list">
+                        <li><a href="#" class="lesson-link active" data-lesson-id="1"><span class="lesson-number">1</span> Знакомство с Python</a></li>
+                        <li><a href="#" class="lesson-link" data-lesson-id="2"><span class="lesson-number">2</span> Переменные и типы данных</a></li>
+                        <li><a href="#" class="lesson-link" data-lesson-id="3"><span class="lesson-number">3</span> Условные операторы</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Прогресс -->
+            <div class="progress-container">
+                <div class="progress-stats">
+                    <span>Прогресс курса</span>
+                    <span id="progress-text">1/30</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progress-bar" style="width: 3.3%;"></div>
+                </div>
+            </div>
+
+            <!-- Кнопка сброса прогресса -->
+            <div class="reset-btn">
+                <button onclick="resetProgress()">🔄 Сбросить прогресс</button>
+            </div>
+        </aside>
+
+        <!-- Верхняя панель -->
+        <header class="top-bar">
+            <div class="course-info">
+                <div class="course-image" style="font-size: 30px;">🐍</div>
+                <h1>Python для подростков</h1>
+            </div>
+            
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <!-- Блок пользователя -->
+                <div id="user-info" style="display: none; align-items: center; gap: 10px;">
+                    <span id="user-name" style="color: #2c3e50; font-weight: bold;">Гость</span>
+                    <span id="user-email" style="color: #7f8c8d; font-size: 14px;"></span>
+                    <button onclick="logout()" class="nav-btn" style="padding: 5px 10px; background-color: #e74c3c; color: white;">Выйти</button>
+                </div>
+                
+                <!-- Блок входа -->
+                <div id="auth-buttons">
+                    <button onclick="showLoginModal()" class="nav-btn">🔑 Войти</button>
+                    <button onclick="showRegisterModal()" class="nav-btn" style="background-color: #3498db; color: white;">📝 Регистрация</button>
+                </div>
+                
+                <div class="nav-menu">
+                    <button class="nav-btn active" id="theory-btn" onclick="switchTab('theory')">📖 Теория</button>
+                    <button class="nav-btn" id="practice-btn" onclick="switchTab('practice')">💻 Практика</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Контент -->
+        <main class="content-area">
+            <!-- Теория -->
+            <div id="theory-content" class="theory-section active">
+                <div class="content-header">
+                    <h2 id="theory-title">Знакомство с Python: Теория</h2>
+                </div>
+                <div class="content-body" id="theory-body"></div>
+            </div>
+
+            <!-- Практика -->
+            <div id="practice-content" class="practice-section">
+                <div class="content-header">
+                    <h2 id="practice-title">Знакомство с Python: Практика</h2>
+                </div>
+                <div class="content-body" id="practice-body"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальное окно входа -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <h3>🔑 Вход в систему</h3>
+            <input type="email" id="login-email" placeholder="Email">
+            <input type="password" id="login-password" placeholder="Пароль">
+            <div class="modal-buttons">
+                <button onclick="closeModals()" class="nav-btn">Отмена</button>
+                <button onclick="login()" class="run-btn" style="background-color: #3498db;">Войти</button>
+            </div>
+            <div id="login-error" class="error-message"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно регистрации -->
+    <div id="register-modal" class="modal">
+        <div class="modal-content">
+            <h3>📝 Регистрация</h3>
+            <input type="text" id="register-name" placeholder="Имя пользователя">
+            <input type="email" id="register-email" placeholder="Email">
+            <input type="password" id="register-password" placeholder="Пароль (минимум 6 символов)">
+            <div class="modal-buttons">
+                <button onclick="closeModals()" class="nav-btn">Отмена</button>
+                <button onclick="register()" class="run-btn" style="background-color: #27ae60;">Зарегистрироваться</button>
+            </div>
+            <div id="register-error" class="error-message"></div>
+        </div>
+    </div>
+
+    <script>
+        // 🔥 ЗАМЕНИ НА СВОИ ДАННЫЕ ИЗ FIREBASE 🔥
+        const firebaseConfig = { 
+  apiKey : "AIzaSyAhGLkrlwCY35ZNW1TX9weoFHyIwghhrAc" , 
+  authDomain : "python-99849.firebaseapp.com" , 
+  projectId : "python-99849" , 
+  storageBucket : "python-99849.firebasestorage.app" , 
+  messagingSenderId : "1016897190553" , 
+  appId : "1:1016897190553:web:ed68ccadac6370c155d608" 
+};
+
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Текущий пользователь
+        let currentUser = null;
+
+        // Переключение вкладок
+        function switchTab(tabName) {
+            document.getElementById('theory-content').classList.remove('active');
+            document.getElementById('practice-content').classList.remove('active');
+            document.getElementById('theory-btn').classList.remove('active');
+            document.getElementById('practice-btn').classList.remove('active');
+            
+            if (tabName === 'theory') {
+                document.getElementById('theory-content').classList.add('active');
+                document.getElementById('theory-btn').classList.add('active');
+            } else {
+                document.getElementById('practice-content').classList.add('active');
+                document.getElementById('practice-btn').classList.add('active');
+            }
+        }
+
+        // Сворачивание модулей
+        function toggleModule(header) {
+            header.nextElementSibling.classList.toggle('collapsed');
+        }
+
+        // Функция для запуска Python кода
+        function runPythonCode(code, outputId) {
+            const outputDiv = document.getElementById(outputId);
+            outputDiv.innerHTML = '⏳ Выполняется...';
+            
+            let output = '';
+            
+            function outf(text) {
+                output += text;
+                outputDiv.innerHTML = output;
+            }
+            
+            function inputfun(prompt) {
+                let answer = window.prompt(prompt);
+                if (answer === null) answer = '';
+                outf(prompt + answer + '\n');
+                return answer;
+            }
+            
+            function builtinRead(x) {
+                if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+                    throw "File not found: '" + x + "'";
+                return Sk.builtinFiles["files"][x];
+            }
+            
+            Sk.configure({
+                output: outf,
+                read: builtinRead,
+                inputfun: inputfun,
+                inputfunTakesPrompt: true,
+                __future__: Sk.python3
+            });
+            
+            output = '';
+            outputDiv.innerHTML = '';
+            
+            Sk.misceval.asyncToPromise(function() {
+                return Sk.importMainWithBody("<stdin>", false, code, true);
+            }).then(function(mod) {
+                output += '\n\n✅ Программа завершена!';
+                outputDiv.innerHTML = output;
+            }, function(err) {
+                console.error("Skulpt error:", err);
+                
+                let errorMsg = err.toString();
+                
+                if (errorMsg.includes("NameError")) {
+                    errorMsg = "❌ Ошибка: имя не найдено. Проверь, правильно ли ты написал название переменной или функции.";
+                } else if (errorMsg.includes("SyntaxError")) {
+                    errorMsg = "❌ Ошибка синтаксиса. Проверь кавычки, скобки и двоеточия.";
+                } else if (errorMsg.includes("TypeError")) {
+                    errorMsg = "❌ Ошибка типа данных. Нельзя складывать строки с числами без преобразования.";
+                } else if (errorMsg.includes("IndentationError")) {
+                    errorMsg = "❌ Ошибка отступов. Проверь пробелы перед строками.";
+                } else if (errorMsg.includes("EOF")) {
+                    errorMsg = "❌ Не хватает закрывающей скобки или кавычки.";
+                }
+                
+                output += '\n' + errorMsg;
+                outputDiv.innerHTML = output;
+            });
+        }
+
+        // Хранилище результатов тестов
+        const testResults = JSON.parse(localStorage.getItem('python_course_tests')) || {};
+
+        // Данные уроков с тестами
+        const lessonsData = {
+            1: {
+                title: "Знакомство с Python",
+                theory: `
+                    <div class="theory-section-content">
+                        <div class="info-box" style="background-color: #e3f2fd; border-left-color: #2196F3;">
+                            <strong>🎯 Цель занятия:</strong> Познакомиться с Python, научиться выводить текст и выполнять вычисления.
+                        </div>
+                        
+                        <div style="background-color: #fff3e0; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <strong>🔥 Интересный факт:</strong> Название Python происходит не от змеи, а от любимого шоу создателя языка — "Летающий цирк Монти Пайтона"! А змея на логотипе - это просто совпадение 😊
+                        </div>
+
+                        <h3>🤔 А ты знал, что...</h3>
+                        <ul>
+                            <li>YouTube написан на Python</li>
+                            <li>Instagram тоже использует Python</li>
+                            <li>NASA запускает ракеты с Python</li>
+                            <li>В Google много Python кода</li>
+                        </ul>
+
+                        <h3>💻 Магия print()</h3>
+                        <p>Команда <code>print()</code> - это как волшебная палочка Гарри Поттера.</p>
+                        
+                        <div class="code-block">
+                            <pre style="margin: 0;">
+# Гарри, используй заклинание!
+print("Люмос!")  # Зажги свет
+print("Вингардиум Левиоса!")  # Подними предмет</pre>
+                        </div>
+
+                        <h3>🎮 Python - суперкалькулятор</h3>
+                        <div class="code-block">
+                            <pre>
+print(2 + 2)      # 4 (легкотня!)
+print(10 * 10)    # 100 (таблица умножения)
+print(100 / 3)    # 33.3333 (бесконечная пицца)
+print(2 ** 10)    # 1024 (мегабайт в гигабайте)
+print(15 % 4)     # 3 (осталось пиццы после вечеринки)</pre>
+                        </div>
+                    </div>
+                `,
+                practice: `
+                    <div class="practice-section-content">
+                        <div class="practice-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+                            <h3 style="margin: 0; color: white;">🚀 Миссия: Стать Python-разработчиком</h3>
+                            <p style="margin: 10px 0 0 0;">Выполни все задания, чтобы получить уровень 1!</p>
+                        </div>
+
+                        <!-- Задание 1 -->
+                        <div class="practice-task">
+                            <div class="task-header">
+                                <span class="task-badge" style="background-color: #3498db;">Уровень 1 ★</span>
+                                <span style="margin-left: 10px;">👋 Первое приветствие</span>
+                            </div>
+                            <div class="task-content">
+                                <p>Напиши программу, которая выведет: "Привет, мир! Я - будущий программист!"</p>
+                                <textarea id="code-1-1" rows="3">print("Привет, мир!")
+print("Я - будущий программист!")</textarea>
+                                <button class="run-btn" onclick="runPythonCode(document.getElementById('code-1-1').value, 'output-1-1')">▶ Проверить</button>
+                                <div id="output-1-1" class="output-area"></div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                test: [
+                    {
+                        question: "Какая команда выводит текст на экран?",
+                        options: ["input()", "print()", "output()", "write()"],
+                        correct: 1
+                    },
+                    {
+                        question: "Что выведет код: print(2 ** 3)?",
+                        options: ["6", "8", "9", "5"],
+                        correct: 1
+                    },
+                    {
+                        question: "Как правильно написать комментарий в Python?",
+                        options: ["// комментарий", "<!-- комментарий -->", "# комментарий", "/* комментарий */"],
+                        correct: 2
+                    },
+                    {
+                        question: "Какой результат у выражения 15 // 4?",
+                        options: ["3.75", "3", "4", "15"],
+                        correct: 1
+                    },
+                    {
+                        question: "Что такое Python?",
+                        options: [
+                            "Язык программирования", 
+                            "Видеоигра", 
+                            "Текстовый редактор", 
+                            "Операционная система"
+                        ],
+                        correct: 0
+                    }
+                ]
+            },
+            
+            2: {
+                title: "Переменные и типы данных",
+                theory: `
+                    <div class="theory-section-content">
+                        <div class="info-box" style="background-color: #e8f5e8; border-left-color: #4CAF50;">
+                            <strong>🎯 Цель:</strong> Научиться хранить информацию в переменных как в ячейках памяти.
+                        </div>
+
+                        <h3>📦 Переменные = коробки с наклейками</h3>
+                        <div class="code-block">
+                            <pre>
+name = "Анна"      # строка
+age = 15           # целое число
+height = 1.65      # дробное число
+is_student = True  # логическое значение</pre>
+                        </div>
+
+                        <h3>📥 Ввод данных</h3>
+                        <div class="code-block">
+                            <pre>
+name = input("Как тебя зовут? ")
+print("Привет,", name)</pre>
+                        </div>
+                    </div>
+                `,
+                practice: `
+                    <div class="practice-section-content">
+                        <div class="practice-header" style="background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+                            <h3 style="margin: 0; color: white;">🎮 Создай своего персонажа</h3>
+                        </div>
+
+                        <!-- Задание 1 -->
+                        <div class="practice-task">
+                            <div class="task-header">
+                                <span class="task-badge">📝 Задание 1</span>
+                                <span style="margin-left: 10px;">Создание персонажа</span>
+                            </div>
+                            <div class="task-content">
+                                <p>Создай переменные для персонажа: имя, класс, уровень.</p>
+                                <textarea id="code-2-1" rows="5">name = "Арагорн"
+class_type = "Следопыт"
+level = 5
+print("Имя:", name)
+print("Класс:", class_type)</textarea>
+                                <button class="run-btn" onclick="runPythonCode(document.getElementById('code-2-1').value, 'output-2-1')">▶ Создать</button>
+                                <div id="output-2-1" class="output-area"></div>
+                            </div>
+                        </div>
+
+                        <!-- Задание 2 -->
+                        <div class="practice-task">
+                            <div class="task-header">
+                                <span class="task-badge" style="background-color: #e74c3c;">⚔️ Задание 2</span>
+                                <span style="margin-left: 10px;">Калькулятор опыта</span>
+                            </div>
+                            <div class="task-content">
+                                <p>Спроси уровень и посчитай опыт (уровень * 1000).</p>
+                                <textarea id="code-2-2" rows="4">level = int(input("Уровень: "))
+exp = level * 1000
+print("Нужно опыта:", exp)</textarea>
+                                <button class="run-btn" onclick="runPythonCode(document.getElementById('code-2-2').value, 'output-2-2')">▶ Посчитать</button>
+                                <div id="output-2-2" class="output-area"></div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                test: [
+                    {
+                        question: "Какой тип данных у значения '15'?",
+                        options: ["int", "str", "float", "bool"],
+                        correct: 1
+                    },
+                    {
+                        question: "Как преобразовать строку в число?",
+                        options: ["str()", "int()", "float()", "bool()"],
+                        correct: 1
+                    },
+                    {
+                        question: "Какое значение у переменной: is_student = True?",
+                        options: ["строка", "число", "логическое", "дробное"],
+                        correct: 2
+                    },
+                    {
+                        question: "Что выведет код: print(type(3.14))?",
+                        options: ["int", "str", "float", "bool"],
+                        correct: 2
+                    },
+                    {
+                        question: "Что не является типом данных в Python?",
+                        options: ["int", "str", "char", "float"],
+                        correct: 2
+                    }
+                ]
+            },
+            
+            3: {
+                title: "Условные операторы",
+                theory: `
+                    <div class="theory-section-content">
+                        <div class="info-box" style="background-color: #f3e5f5; border-left-color: #9C27B0;">
+                            <strong>🎯 Цель:</strong> Научиться принимать решения в коде.
+                        </div>
+
+                        <h3>🤔 Условный оператор</h3>
+                        <div class="code-block">
+                            <pre>
+age = 16
+
+if age >= 18:
+    print("Ты взрослый!")
+else:
+    print("Ты еще ребенок!")</pre>
+                        </div>
+
+                        <h3>🔍 Операторы сравнения</h3>
+                        <ul>
+                            <li>== - равно</li>
+                            <li>!= - не равно</li>
+                            <li>> - больше</li>
+                            <li>< - меньше</li>
+                        </ul>
+                    </div>
+                `,
+                practice: `
+                    <div class="practice-section-content">
+                        <div class="practice-header" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+                            <h3 style="margin: 0; color: white;">🎯 Квест: Принятие решений</h3>
+                        </div>
+
+                        <!-- Задание 1 -->
+                        <div class="practice-task">
+                            <div class="task-header">
+                                <span class="task-badge" style="background-color: #3498db;">🔰 Задание 1</span>
+                                <span style="margin-left: 10px;">Проверка пароля</span>
+                            </div>
+                            <div class="task-content">
+                                <p>Спроси пароль. Если "python123" - доступ разрешен.</p>
+                                <textarea id="code-3-1" rows="5">password = input("Пароль: ")
+if password == "python123":
+    print("✅ Доступ разрешен")
+else:
+    print("❌ Неверный пароль")</textarea>
+                                <button class="run-btn" onclick="runPythonCode(document.getElementById('code-3-1').value, 'output-3-1')">▶ Проверить</button>
+                                <div id="output-3-1" class="output-area"></div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                test: [
+                    {
+                        question: "Что выведет код: age = 16; if age >= 18: print('ok') else: print('no')?",
+                        options: ["ok", "no", "ошибка", "ничего"],
+                        correct: 1
+                    },
+                    {
+                        question: "Какой оператор означает 'не равно'?",
+                        options: ["==", "!=", "<>", "><"],
+                        correct: 1
+                    },
+                    {
+                        question: "Что такое elif?",
+                        options: [
+                            "Команда вывода", 
+                            "Тип данных", 
+                            "Проверка нескольких условий", 
+                            "Цикл"
+                        ],
+                        correct: 2
+                    },
+                    {
+                        question: "Какой результат: 10 > 5 and 3 < 1?",
+                        options: ["True", "False", "Ошибка", "10"],
+                        correct: 1
+                    },
+                    {
+                        question: "Что выведет код: if 5: print('да') else: print('нет')?",
+                        options: ["да", "нет", "ошибка", "ничего"],
+                        correct: 0
+                    }
+                ]
+            }
+        };
+
+        // Функции для модальных окон
+        function showLoginModal() {
+            document.getElementById('login-modal').style.display = 'block';
+        }
+
+        function showRegisterModal() {
+            document.getElementById('register-modal').style.display = 'block';
+        }
+
+        function closeModals() {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('register-modal').style.display = 'none';
+            document.getElementById('login-error').innerHTML = '';
+            document.getElementById('register-error').innerHTML = '';
+        }
+
+        // Регистрация
+        function register() {
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            
+            if (!name || !email || !password) {
+                document.getElementById('register-error').innerHTML = 'Заполните все поля!';
+                return;
+            }
+            
+            if (password.length < 6) {
+                document.getElementById('register-error').innerHTML = 'Пароль должен быть минимум 6 символов';
+                return;
+            }
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    return userCredential.user.updateProfile({
+                        displayName: name
+                    }).then(() => {
+                        return db.collection('users').doc(userCredential.user.uid).set({
+                            name: name,
+                            email: email,
+                            testResults: {},
+                            createdAt: new Date()
+                        });
+                    });
+                })
+                .then(() => {
+                    closeModals();
+                    updateUserUI();
+                })
+                .catch((error) => {
+                    document.getElementById('register-error').innerHTML = error.message;
+                });
+        }
+
+        // Вход
+        function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!email || !password) {
+                document.getElementById('login-error').innerHTML = 'Заполните все поля!';
+                return;
+            }
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    closeModals();
+                    updateUserUI();
+                })
+                .catch((error) => {
+                    document.getElementById('login-error').innerHTML = error.message;
+                });
+        }
+
+        // Выход
+        function logout() {
+            auth.signOut().then(() => {
+                currentUser = null;
+                updateUserUI();
+                localStorage.removeItem('python_course_tests');
+                loadLesson('1');
+            });
+        }
+
+        // Обновление интерфейса пользователя
+        function updateUserUI() {
+            const user = auth.currentUser;
+            
+            if (user) {
+                currentUser = user;
+                document.getElementById('auth-buttons').style.display = 'none';
+                document.getElementById('user-info').style.display = 'flex';
+                document.getElementById('user-name').textContent = user.displayName || 'Пользователь';
+                document.getElementById('user-email').textContent = user.email;
+                
+                loadUserProgress(user.uid);
+            } else {
+                currentUser = null;
+                document.getElementById('auth-buttons').style.display = 'block';
+                document.getElementById('user-info').style.display = 'none';
+            }
+        }
+
+        // Загрузка прогресса пользователя
+        async function loadUserProgress(userId) {
+            try {
+                const doc = await db.collection('users').doc(userId).get();
+                if (doc.exists) {
+                    const userData = doc.data();
+                    if (userData.testResults) {
+                        Object.keys(userData.testResults).forEach(key => {
+                            testResults[key] = userData.testResults[key];
+                        });
+                        localStorage.setItem('python_course_tests', JSON.stringify(testResults));
+                        
+                        const lastLesson = Object.keys(testResults).pop() || '1';
+                        updateLessonAccess(parseInt(lastLesson));
+                        loadLesson(document.querySelector('.lesson-link.active').dataset.lessonId);
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading progress:", error);
+            }
+        }
+
+        // Сохранение прогресса
+        async function saveProgress(lessonId) {
+            if (currentUser) {
+                try {
+                    await db.collection('users').doc(currentUser.uid).update({
+                        [`testResults.${lessonId}`]: true
+                    });
+                } catch (error) {
+                    console.error("Error saving progress:", error);
+                }
+            }
+        }
+
+        // Функция создания HTML теста
+        function createTestHTML(lessonId, questions) {
+            let html = `
+                <div class="test-section">
+                    <h3 style="color: #2c3e50; margin-bottom: 20px;">📝 Тест по теме</h3>
+                    <p style="margin-bottom: 20px;">Ответь на 5 вопросов, чтобы открыть следующий урок!</p>
+                    <div id="test-${lessonId}-questions">
+            `;
+            
+            questions.forEach((q, index) => {
+                html += `
+                    <div class="test-question">
+                        <p style="font-weight: bold; margin-bottom: 10px;">${index + 1}. ${q.question}</p>
+                        <div style="margin-left: 20px;">
+                `;
+                
+                q.options.forEach((opt, optIndex) => {
+                    html += `
+                        <div style="margin-bottom: 8px;">
+                            <label>
+                                <input type="radio" name="q${lessonId}-${index}" value="${optIndex}" 
+                                       ${testResults[lessonId] ? 'disabled' : ''}>
+                                ${opt}
+                            </label>
+                        </div>
+                    `;
+                });
+                
+                html += `</div></div>`;
+            });
+            
+            html += `
+                    </div>
+                    ${!testResults[lessonId] ? 
+                        '<button onclick="checkTest(' + lessonId + ')" class="run-btn" style="background-color: #27ae60;">✅ Проверить тест</button>' : 
+                        '<div style="color: #27ae60; font-weight: bold;">✅ Тест пройден! Урок ' + (parseInt(lessonId) + 1) + ' открыт</div>'
+                    }
+                    <div id="test-${lessonId}-result" style="margin-top: 15px;"></div>
+                </div>
+            `;
+            
+            return html;
+        }
+
+        // Функция проверки теста
+        function checkTest(lessonId) {
+            const questions = lessonsData[lessonId].test;
+            let correctCount = 0;
+            
+            for (let i = 0; i < questions.length; i++) {
+                const selected = document.querySelector(`input[name="q${lessonId}-${i}"]:checked`);
+                if (selected) {
+                    const answer = parseInt(selected.value);
+                    if (answer === questions[i].correct) {
+                        correctCount++;
+                    }
+                }
+            }
+            
+            const resultDiv = document.getElementById(`test-${lessonId}-result`);
+            
+            if (correctCount === questions.length) {
+                testResults[lessonId] = true;
+                localStorage.setItem('python_course_tests', JSON.stringify(testResults));
+                
+                saveProgress(lessonId);
+                
+                resultDiv.innerHTML = `
+                    <div style="padding: 15px; background-color: #d4edda; color: #155724; border-radius: 4px;">
+                        ✅ Поздравляем! Ты ответил правильно на все вопросы!<br>
+                        Урок ${parseInt(lessonId) + 1} теперь доступен.
+                    </div>
+                `;
+                
+                updateLessonAccess(lessonId);
+                loadLesson(lessonId);
+            } else {
+                resultDiv.innerHTML = `
+                    <div style="padding: 15px; background-color: #f8d7da; color: #721c24; border-radius: 4px;">
+                        ❌ Правильных ответов: ${correctCount} из ${questions.length}. Попробуй еще раз!
+                    </div>
+                `;
+            }
+        }
+
+        // Функция обновления доступа к урокам
+        function updateLessonAccess(currentLessonId) {
+            const currentId = parseInt(currentLessonId);
+            
+            document.querySelectorAll('.lesson-link').forEach(link => {
+                const lessonId = parseInt(link.dataset.lessonId);
+                
+                if (lessonId === 1) {
+                    link.style.opacity = '1';
+                    link.style.pointerEvents = 'auto';
+                    link.title = '';
+                    const existingLock = link.querySelector('.lock-icon');
+                    if (existingLock) existingLock.remove();
+                    return;
+                }
+                
+                const prevLessonPassed = testResults[lessonId - 1];
+                
+                if (prevLessonPassed || lessonId <= currentId) {
+                    link.style.opacity = '1';
+                    link.style.pointerEvents = 'auto';
+                    link.title = '';
+                    const existingLock = link.querySelector('.lock-icon');
+                    if (existingLock) existingLock.remove();
+                } else {
+                    link.style.opacity = '0.5';
+                    link.style.pointerEvents = 'none';
+                    link.title = '❌ Пройди тест предыдущего урока';
+                    
+                    if (!link.querySelector('.lock-icon')) {
+                        const lockSpan = document.createElement('span');
+                        lockSpan.className = 'lock-icon';
+                        lockSpan.innerHTML = ' 🔒';
+                        link.appendChild(lockSpan);
+                    }
+                }
+            });
+        }
+
+        // Функция сброса прогресса
+        function resetProgress() {
+            if (confirm('Сбросить весь прогресс тестов?')) {
+                localStorage.removeItem('python_course_tests');
+                Object.keys(testResults).forEach(key => delete testResults[key]);
+                
+                if (currentUser) {
+                    db.collection('users').doc(currentUser.uid).update({
+                        testResults: {}
+                    }).catch(error => console.error("Error resetting progress:", error));
+                }
+                
+                loadLesson('1');
+            }
+        }
+
+        // Загрузка урока
+        function loadLesson(lessonId) {
+            const lesson = lessonsData[lessonId];
+            if (!lesson) return;
+            
+            document.getElementById('theory-title').innerHTML = lesson.title + ': Теория';
+            document.getElementById('practice-title').innerHTML = lesson.title + ': Практика';
+            document.getElementById('theory-body').innerHTML = lesson.theory;
+            
+            let practiceHTML = lesson.practice;
+            
+            if (lesson.test) {
+                practiceHTML += createTestHTML(lessonId, lesson.test);
+            }
+            
+            document.getElementById('practice-body').innerHTML = practiceHTML;
+            
+            document.querySelectorAll('.lesson-link').forEach(l => l.classList.remove('active'));
+            document.querySelector(`[data-lesson-id="${lessonId}"]`).classList.add('active');
+            
+            updateLessonAccess(lessonId);
+            
+            document.getElementById('progress-text').innerHTML = lessonId + '/30';
+            document.getElementById('progress-bar').style.width = (lessonId / 30 * 100) + '%';
+            
+            switchTab('theory');
+        }
+
+        // Обработчики кликов
+        document.querySelectorAll('.lesson-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const lessonId = this.dataset.lessonId;
+                
+                const linkStyle = window.getComputedStyle(this);
+                if (linkStyle.pointerEvents === 'none') {
+                    alert('❌ Сначала пройди тест предыдущего урока!');
+                    return;
+                }
+                
+                loadLesson(lessonId);
+            });
+        });
+
+        // Следим за состоянием аутентификации
+        auth.onAuthStateChanged((user) => {
+            updateUserUI();
+        });
+
+        // Загружаем первый урок
+        loadLesson('1');
+    </script>
+</body>
+</html>
